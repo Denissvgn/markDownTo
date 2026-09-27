@@ -1,0 +1,26 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+.DS_Store
+/reports/
+
+# Local configuration and credentials (examples must contain placeholders only)
+.env*
+!.env.example
+!.env.sample
+.npmrc
+.npmrc.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+credentials.json
+service-account*.json
+/.agents/
+/.codex/
