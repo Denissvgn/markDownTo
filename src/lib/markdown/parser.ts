@@ -1,4 +1,4 @@
-import type { Root } from 'mdast';
+import type { Nodes, Root } from 'mdast';
 import { unified } from 'unified';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
@@ -18,10 +18,12 @@ export function extractDocumentTitle(markdown: string, fallback = 'Markdown Docu
     return fallback;
   }
 
-  const title = heading.children
-    .map((node) => ('value' in node && typeof node.value === 'string' ? node.value : ''))
-    .join('')
-    .trim();
+  function text(node: Nodes): string {
+    if (node.type === 'text' || node.type === 'inlineCode') return node.value;
+    if (node.type === 'image' || node.type === 'imageReference') return node.alt ?? '';
+    return 'children' in node ? node.children.map(text).join('') : '';
+  }
+  const title = heading.children.map(text).join('').trim();
 
   return title || fallback;
 }

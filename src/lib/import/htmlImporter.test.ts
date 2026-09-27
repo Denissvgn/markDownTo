@@ -164,3 +164,10 @@ describe('htmlImporter', () => {
     expect(result.markdown).not.toContain('<table');
   });
 });
+
+
+it('preserves image destination and escaped alt/title through Markdown reparsing', () => {
+  const result = convertHtmlToMarkdown('<img src="https://example.test/a(b) c.png?x=1&amp;y=2" alt="[label] *literal*" title="A &quot;title&quot;">');
+  const tree = parseMarkdown(result.markdown);
+  expect(tree.children[0]).toMatchObject({ type: 'paragraph', children: [{ type: 'image', url: 'https://example.test/a(b)%20c.png?x=1&y=2', alt: '[label] *literal*', title: 'A "title"' }] });
+});

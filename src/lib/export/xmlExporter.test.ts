@@ -23,3 +23,15 @@ This is a paragraph with **bold** and *italic* text.
     expect(xml).toContain('<item><paragraph>Item 1</paragraph>');
   });
 });
+
+it('replaces XML-invalid characters in text, code and metadata while preserving Unicode', () => {
+  const bad = 'A\u0001\ud800\ufffeZ';
+  const xml = exportToXml(`# ${bad}\n\n\`${bad}\`\n\n![${bad}](image.png "${bad}")\n\n😀 café`, bad, new Date(0));
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  expect(document.querySelector('parsererror')).toBeNull();
+  expect(document.querySelector('title')?.textContent).toBe('A���Z');
+  expect(document.querySelector('code-inline')?.textContent).toBe('A���Z');
+  expect(document.querySelector('image')?.getAttribute('alt')).toBe('A���Z');
+  expect(document.querySelector('image')?.getAttribute('title')).toBe('A���Z');
+  expect(document.documentElement.textContent).toContain('😀 café');
+});

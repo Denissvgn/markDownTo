@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import * as renderer from 'mdast2docx';
+import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { clientDocxExporter } from './clientDocxExporter';
+
+vi.mock('mdast2docx', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('mdast2docx')>();
+  return { ...actual, toDocx: vi.fn(actual.toDocx) };
+});
 
 describe('clientDocxExporter', () => {
   it('returns a valid DOCX archive with document text', async () => {
@@ -70,3 +76,21 @@ function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
     reader.readAsArrayBuffer(blob);
   });
 }
+
+
+it('retries failed image rendering from a fresh tree after renderer mutation', async () => {
+  const spy = vi.mocked(renderer.toDocx).mockClear().mockImplementationOnce((ast) => {
+    Object.assign(ast, { children: [] });
+    throw new Error('Synthetic image failure after mutation');
+  });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    const blob = await clientDocxExporter.export({
+      markdown: '> Earlier quote\n\n```text\nEarlier code\n```\n\n| Header |\n| --- |\n| Earlier cell |\n\n![Fallback image](https://example.com/image.png)',
+      title: 'Fallback', filenameBase: 'fallback', generatedAt: new Date(0)
+    });
+    const { documentXml } = await readDocx(blob);
+    for (const text of ['Earlier quote', 'Earlier code', 'Earlier cell', 'Fallback image']) expect(documentXml).toContain(text);
+    expect(spy).toHaveBeenCalledTimes(2);
+  } finally { spy.mockClear(); warning.mockRestore(); }
+});

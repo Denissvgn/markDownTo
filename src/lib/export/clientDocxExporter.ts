@@ -237,8 +237,11 @@ export const clientDocxExporter: ExportAdapter = {
     try {
       return await renderDocx(ast, request, includeImages);
     } catch (error) {
+      if (!includeImages) throw error;
       console.warn('DOCX export with images failed. Retrying with image alt text.', error);
-      return renderDocx(replaceImagesWithText(ast), request, false);
+      // Render plugins mutate their input; never retry from the consumed tree.
+      const freshAst = sanitizeDocxAst(parseMarkdown(request.markdown));
+      return renderDocx(replaceImagesWithText(freshAst), request, false);
     }
   }
 };

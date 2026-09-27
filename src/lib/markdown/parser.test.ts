@@ -56,3 +56,8 @@ describe('document helpers', () => {
     expect(slugifyFilename('')).toBe('markdown-document');
   });
 });
+
+it('extracts text recursively from formatted H1 content without HTML syntax', () => {
+  expect(extractDocumentTitle('# **Release** [*notes*](https://example.com) `v1` ![icon](icon.png)')).toBe('Release notes v1 icon');
+  expect(extractDocumentTitle('# <span>Title</span>')).toBe('Title');
+});

@@ -48,3 +48,10 @@ This is **bold** and *italic* text with \`code\`.
     expect(() => convertXmlToMarkdown('<root><paragraph>Text</paragraph></root>')).toThrow(ImportConversionError);
   });
 });
+
+it('retains an ordinary parsererror tag as unsupported content but rejects malformed XML', () => {
+  const result = convertXmlToMarkdown('<document><content><parsererror>Keep this text</parsererror></content></document>');
+  expect(result.markdown).toBe('Keep this text\n');
+  expect(result.warnings).toEqual(['Unsupported XML tag <parsererror> was converted using its text content.']);
+  expect(() => convertXmlToMarkdown('<document><content>')).toThrow('not well-formed XML');
+});

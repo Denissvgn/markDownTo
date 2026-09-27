@@ -78,7 +78,15 @@ export function mdastToXml(node: Nodes | null | undefined): string {
 }
 
 export function escapeXml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  // XML 1.0 excludes most controls, lone surrogates and U+FFFE/U+FFFF.
+  // Replace invalid characters visibly rather than emit an unparseable file.
+  const validText = Array.from(text, (character) => {
+    const point = character.codePointAt(0)!;
+    return point === 9 || point === 10 || point === 13 ||
+      (point >= 0x20 && point <= 0xd7ff) || (point >= 0xe000 && point <= 0xfffd) ||
+      (point >= 0x10000 && point <= 0x10ffff) ? character : '\uFFFD';
+  }).join('');
+  return validText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 function attribute(name: 'url' | 'title' | 'alt' | 'language', value: string | null | undefined): string {

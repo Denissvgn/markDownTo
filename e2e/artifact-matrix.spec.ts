@@ -102,3 +102,40 @@ test('documented XML example and default sample export successfully', async ({ p
   await page.locator('input[type="file"]').setInputFiles(path);
   await expect(editor).toHaveValue(/Water the seedlings/);
 });
+
+test('XML export remains parseable with invalid characters and imports ordinary parsererror tags', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Markdown source').fill('# **Formatted** title\n\nBad control: \u0001; emoji: 😀');
+  const waiting = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download XML', exact: true }).click();
+  const download = await waiting;
+  const path = testInfo.outputPath('characters.xml');
+  await download.saveAs(path);
+  expect(await download.failure()).toBeNull();
+  const parsed = await page.evaluate((xml) => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    return { error: doc.getElementsByTagNameNS('http://www.mozilla.org/newlayout/xml/parsererror.xml', 'parsererror').length, title: doc.querySelector('title')?.textContent, text: doc.querySelector('content')?.textContent };
+  }, await readFile(path, 'utf8'));
+  expect(parsed.error).toBe(0);
+  expect(parsed.title).toBe('Formatted title');
+  expect(parsed.text).toContain('Bad control: �; emoji: 😀');
+  await page.locator('input[type="file"]').setInputFiles({ name: 'unknown.xml', mimeType: 'application/xml', buffer: Buffer.from('<document><content><parsererror>Keep text</parsererror></content></document>') });
+  await expect(page.getByLabel('Markdown source')).toHaveValue('Keep text\n');
+  await expect(page.locator('.status-line')).toContainText('Unsupported XML tag');
+});
+
+test('failed image DOCX export retains preceding formatted blocks and alt text', async ({ page }, testInfo) => {
+  await page.route('**/broken-image.png', (route) => route.fulfill({ contentType: 'image/png', body: 'not a PNG' }));
+  await page.goto('/');
+  const imageURL = new URL('/broken-image.png', page.url()).href;
+  await page.getByLabel('Markdown source').fill(`> Earlier quote\n\n\`\`\`text\nEarlier code\n\`\`\`\n\n| Header |\n| --- |\n| Earlier cell |\n\n![Fallback image](${imageURL})`);
+  const waiting = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download DOCX', exact: true }).click();
+  const download = await waiting;
+  const path = testInfo.outputPath('fallback.docx');
+  await download.saveAs(path);
+  expect(await download.failure()).toBeNull();
+  const zip = await JSZip.loadAsync(await readFile(path));
+  const xml = await zip.file('word/document.xml')!.async('string');
+  for (const text of ['Earlier quote', 'Earlier code', 'Earlier cell', 'Fallback image']) expect(xml).toContain(text);
+});

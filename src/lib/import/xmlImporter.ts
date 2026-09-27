@@ -20,7 +20,7 @@ interface XmlImportState {
 
 export function convertXmlToMarkdown(xml: string): XmlToMarkdownResult {
   const document = new DOMParser().parseFromString(xml, 'application/xml');
-  const parserError = document.querySelector('parsererror');
+  const parserError = document.getElementsByTagNameNS('http://www.mozilla.org/newlayout/xml/parsererror.xml', 'parsererror')[0];
 
   if (parserError) {
     throw new ImportConversionError('XML import failed because the file is not well-formed XML.');

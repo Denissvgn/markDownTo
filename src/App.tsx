@@ -133,6 +133,13 @@ export default function App() {
     }
   }
 
+  function invalidatePendingImport() {
+    importRequest.current += 1;
+    setExportState((current) => current.status === 'working' && current.message.startsWith('Importing ')
+      ? { status: 'idle', message: 'Import canceled because the document changed. Select the file again to import.' }
+      : current);
+  }
+
   function handleConvertHtmlTables() {
     const converted = convertEmbeddedHtmlTables(markdown);
     if (converted.markdown === markdown) {
@@ -140,6 +147,7 @@ export default function App() {
       return;
     }
     rememberSource();
+    invalidatePendingImport();
     setMarkdown(converted.markdown);
     setExportState({ status: 'success', message: `Converted HTML tables to Markdown${formatImportWarningSummary(converted.warnings)}` });
   }
@@ -152,6 +160,7 @@ export default function App() {
       if (!pasted) return;
       event.preventDefault();
       rememberSource();
+      invalidatePendingImport();
       setMarkdown(pasted.markdown);
       setExportState({ status: 'success', message: `${pasted.converted ? 'Pasted table converted to Markdown' : 'Pasted source preserved'}${formatImportWarningSummary(pasted.warnings)}` });
       requestAnimationFrame(() => {
@@ -265,7 +274,7 @@ export default function App() {
       <section className="export-bar" aria-label="Export formats">
         <label className="filename-field">
           <span>Filename</span>
-          <input value={filenameBase} onChange={(event) => setFilenameBase(event.target.value)} />
+          <input value={filenameBase} onChange={(event) => { invalidatePendingImport(); setFilenameBase(event.target.value); }} />
         </label>
 
         <div className="export-actions">
@@ -322,7 +331,7 @@ export default function App() {
             aria-label="Markdown source"
             spellCheck="false"
             value={markdown}
-            onChange={(event) => setMarkdown(event.target.value)}
+            onChange={(event) => { invalidatePendingImport(); setMarkdown(event.target.value); }}
             onPaste={handleEditorPaste}
           />
         </section>

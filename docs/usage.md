@@ -1,6 +1,6 @@
 # Working with documents
 
-MarkdownTo imports Markdown/plain text (`.md`, `.markdown`, `.txt`), DOCX, HTML (`.html`, `.htm`), and its own XML dialect. Downloads are Markdown, DOCX, HTML and XML. PDF is not implemented. Imports replace the current editor document; a failed import keeps the previous draft and filename.
+MarkdownTo imports Markdown/plain text (`.md`, `.markdown`, `.txt`), DOCX, HTML (`.html`, `.htm`), and its own XML dialect. Downloads are Markdown, DOCX, HTML and XML. PDF is not implemented. Imports replace the current editor document; a failed import keeps the previous draft and filename. Editing or renaming the document while an import is pending cancels that import so its result cannot overwrite newer work.
 
 ## Saving and recovery
 
@@ -38,4 +38,4 @@ This is a custom, case-sensitive dialect, not arbitrary XML, Word XML or a gener
 | `code-block` | Literal text; optional `language` |
 | `break`, `horizontal-rule` | Hard line break and thematic break |
 
-Unknown content tags produce warnings and fall back to text/recognized inline children; they are not preserved as arbitrary XML. A table without header cells is skipped with a warning. Unrecognized attributes are ignored. Table alignment, source whitespace, reference-definition spelling and metadata are not exact round trips. Escape XML characters (`&amp;`, `&lt;`, etc.) normally. Supported link/image references in Markdown become explicit XML destinations; HTML/XML exports apply the destination policy above. Importing a destination into source does not mean it will pass that export policy.
+Unknown content tags produce warnings and fall back to text/recognized inline children; they are not preserved as arbitrary XML. A table without header cells is skipped with a warning. Unrecognized attributes are ignored. Table alignment, source whitespace, reference-definition spelling and metadata are not exact round trips. Escape XML characters (`&amp;`, `&lt;`, etc.) normally. XML export replaces characters forbidden by XML 1.0 (such as control characters and lone surrogates) with the visible replacement character U+FFFD. Supported link/image references in Markdown become explicit XML destinations; HTML/XML exports apply the destination policy above. Importing a destination into source does not mean it will pass that export policy.

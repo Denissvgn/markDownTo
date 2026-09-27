@@ -1,7 +1,7 @@
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { ImportConversionError } from './types';
-import { markdownFence, normalizeMarkdown } from './markdownUtils';
+import { escapeMarkdownText, markdownFence, markdownLinkDestination, markdownTitle, normalizeMarkdown } from './markdownUtils';
 import { planEmbeddedTableConversions } from './embeddedTables';
 export { hasConvertibleHtmlTables } from './embeddedTables';
 
@@ -136,10 +136,10 @@ function createTurndownService(warnings: string[], options: HtmlToMarkdownOption
           warnings.push('An embedded or unavailable image was replaced with placeholder text.');
         }
 
-        return alt ? `[${alt}]` : '[Embedded image omitted]';
+        return alt ? `[${escapeMarkdownText(alt)}]` : '[Embedded image omitted]';
       }
 
-      return `![${alt}](${src}${title ? ` "${title.replace(/"/g, '\\"')}"` : ''})`;
+      return `![${escapeMarkdownText(alt)}](${markdownLinkDestination(src)}${markdownTitle(title)})`;
     }
   });
 

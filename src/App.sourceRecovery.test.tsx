@@ -122,3 +122,24 @@ describe('source preservation and recovery', () => {
     expect(editor()).toHaveValue('# Typed during import');
   });
 });
+
+it.each(['markdown', 'filename', 'conversion', 'paste'])('cancels a pending import after a local %s change', async (change) => {
+  let resolve!: (result: ImportResult) => void;
+  vi.spyOn(markdownImporterAdapter, 'import').mockImplementation(() => new Promise((done) => { resolve = done; }));
+  localStorage.setItem('markdown-to:draft', original);
+  const { container } = render(<App />);
+  fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [new File(['late'], 'late.md')] } });
+  if (change === 'markdown') fireEvent.change(editor(), { target: { value: '# New typing' } });
+  if (change === 'filename') fireEvent.change(screen.getByRole('textbox', { name: 'Filename' }), { target: { value: 'renamed' } });
+  if (change === 'conversion') fireEvent.click(screen.getByRole('button', { name: 'Convert HTML Tables' }));
+  if (change === 'paste') {
+    editor().setSelectionRange(0, 0);
+    fireEvent.paste(editor(), { clipboardData: { getData: (type: string) => type === 'text/plain' ? table : '' } });
+  }
+  const draft = editor().value;
+  const filename = (screen.getByRole('textbox', { name: 'Filename' }) as HTMLInputElement).value;
+  await act(async () => resolve({ markdown: '# Late overwrite', filenameBase: 'late', sourceFormat: 'markdown', warnings: [] }));
+  expect(editor()).toHaveValue(draft);
+  expect(screen.getByRole('textbox', { name: 'Filename' })).toHaveValue(filename);
+  expect(screen.queryByText('Importing Markdown')).toBeNull();
+});
