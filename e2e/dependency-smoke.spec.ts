@@ -1,0 +1,47 @@
+import { expect, test } from './fixtures';
+import { readFile } from 'node:fs/promises';
+import JSZip from 'jszip';
+
+test('exports a real PNG in DOCX and imports its placeholder after dependency updates', async ({ page }, testInfo) => {
+  await page.goto('/');
+  const pixel = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#0f766e';
+    context.fillRect(0, 0, 2, 2);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.route('**/dependency-pixel.png', (route) => route.fulfill({ contentType: 'image/png', body: Buffer.from(pixel, 'base64') }));
+  const imageURL = new URL('/dependency-pixel.png', page.url()).href;
+  await page.getByLabel('Markdown source').fill(`# Image smoke\n\n![Pixel](${imageURL})`);
+  const waiting = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download DOCX', exact: true }).click();
+  const download = await waiting;
+  const path = testInfo.outputPath('image-smoke.docx');
+  await download.saveAs(path);
+  expect(await download.failure()).toBeNull();
+  const bytes = await readFile(path);
+  const zip = await JSZip.loadAsync(bytes);
+  const media = Object.keys(zip.files).filter((name) => /^word\/media\/.+\.png$/.test(name));
+  expect(media.length).toBeGreaterThan(0);
+  expect(await zip.file('word/document.xml')!.async('string')).toContain('<w:drawing>');
+  const storedImage = await zip.file(media[0])!.async('uint8array');
+  expect(Array.from(storedImage.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  await page.locator('input[type="file"]').setInputFiles({ name: 'image-smoke.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: bytes });
+  await expect(page.getByRole('textbox', { name: 'Filename', exact: true })).toHaveValue('image-smoke');
+  await expect(page.getByLabel('Markdown source')).toHaveValue(/Image smoke/);
+  await expect(page.getByLabel('Markdown source')).toHaveValue(/\[(?:Pixel|Embedded image omitted)\]/);
+  await expect(page.locator('.status-line')).toContainText(/imported with [1-9]\d* warnings?/);
+  await expect(page.getByLabel('Markdown source')).not.toHaveValue(/data:image/);
+  const imported = await page.getByLabel('Markdown source').inputValue();
+  const markdownWaiting = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download Markdown', exact: true }).click();
+  const markdownDownload = await markdownWaiting;
+  const markdownPath = testInfo.outputPath('image-smoke.md');
+  await markdownDownload.saveAs(markdownPath);
+  expect(await markdownDownload.failure()).toBeNull();
+  expect(markdownDownload.suggestedFilename()).toBe('image-smoke.md');
+  expect(await readFile(markdownPath, 'utf8')).toBe(imported);
+});

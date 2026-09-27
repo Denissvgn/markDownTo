@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+  <metadata>
+    <title>Garden notes</title>
+    <generated-at>2026-09-27T00:00:00.000Z</generated-at>
+  </metadata>
+  <content>
+    <heading level="1">Garden notes</heading>
+    <paragraph>Plant <bold>herbs</bold> near the window.</paragraph>
+    <list type="unordered">
+      <item checked="false"><paragraph>Water the seedlings</paragraph></item>
+    </list>
+    <paragraph><link url="https://example.com/garden" title="Example guide">Garden guide</link></paragraph>
+  </content>
+</document>
