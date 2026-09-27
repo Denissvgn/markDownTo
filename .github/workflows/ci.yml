@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Record candidate
+        run: |
+          mkdir -p ci-results
+          git rev-parse HEAD > ci-results/commit.txt
+          node --version > ci-results/node.txt
+          npm --version > ci-results/npm.txt
+      - name: Check toolchain
+        run: npm run check:toolchain
+      - name: Clean install
+        run: npm ci
+      - name: Install managed Chromium and system dependencies
+        run: npm exec playwright -- install --with-deps chromium
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Production browser and saved-artifact tests
+        run: npm run test:e2e:production -- --reporter=list,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ci-results/browser.json
+      - name: Full dependency audit
+        if: ${{ !cancelled() }}
+        run: npm audit --audit-level=low --json > ci-results/audit-full.json
+      - name: Production dependency audit
+        if: ${{ !cancelled() }}
+        run: npm audit --omit=dev --audit-level=low --json > ci-results/audit-production.json
+      - name: Collect build receipt
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f node_modules/.cache/markdown-to/build-identity.json ]; then
+            cp node_modules/.cache/markdown-to/build-identity.json ci-results/build-identity.json
+          fi
+      - name: Upload verification evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-results/
+            test-results/
+            playwright-report/
+          if-no-files-found: error
+          retention-days: 14
