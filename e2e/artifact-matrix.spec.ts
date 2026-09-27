@@ -62,7 +62,7 @@ test('invalid XML preserves the current draft and filename; unknown tags warn an
   const filename = page.getByRole('textbox', { name: 'Filename', exact: true });
   await editor.fill('# Keep this draft');
   await filename.fill('keep-this');
-  for (const [xml, message] of [['<document>', 'not well-formed XML'], ['<other/>', '<document><content> schema']]) {
+  for (const [xml, message] of [['<document>', 'not well-formed XML'], ['<document><content><paragraph>partial', 'not well-formed XML'], ['<other/>', '<document><content> schema']]) {
     await page.locator('input[type="file"]').setInputFiles({ name: 'invalid.xml', mimeType: 'application/xml', buffer: Buffer.from(xml) });
     await expect(page.locator('.status-line')).toContainText(message);
     await expect(editor).toHaveValue('# Keep this draft');

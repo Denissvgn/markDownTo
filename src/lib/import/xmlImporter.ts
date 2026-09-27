@@ -20,7 +20,9 @@ interface XmlImportState {
 
 export function convertXmlToMarkdown(xml: string): XmlToMarkdownResult {
   const document = new DOMParser().parseFromString(xml, 'application/xml');
-  const parserError = document.getElementsByTagNameNS('http://www.mozilla.org/newlayout/xml/parsererror.xml', 'parsererror')[0];
+  // Gecko/jsdom and Chromium/WebKit use different error namespaces.
+  const parserError = ['http://www.mozilla.org/newlayout/xml/parsererror.xml', 'http://www.w3.org/1999/xhtml']
+    .some((namespace) => document.getElementsByTagNameNS(namespace, 'parsererror').length > 0);
 
   if (parserError) {
     throw new ImportConversionError('XML import failed because the file is not well-formed XML.');

@@ -55,3 +55,8 @@ it('retains an ordinary parsererror tag as unsupported content but rejects malfo
   expect(result.warnings).toEqual(['Unsupported XML tag <parsererror> was converted using its text content.']);
   expect(() => convertXmlToMarkdown('<document><content>')).toThrow('not well-formed XML');
 });
+
+
+it.each(['http://www.mozilla.org/newlayout/xml/parsererror.xml', 'http://www.w3.org/1999/xhtml'])('recognizes the parser error namespace %s', (namespace) => {
+  expect(() => convertXmlToMarkdown(`<document><parsererror xmlns="${namespace}">Error</parsererror><content><paragraph>Partial</paragraph></content></document>`)).toThrow('not well-formed XML');
+});
