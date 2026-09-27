@@ -27,4 +27,4 @@ See [development and verification](docs/development.md) for Linux browser depend
 
 ## License
 
-[MIT](LICENSE) © 2026 Denissvgn.
+[MIT](LICENSE) © 2026 Denissvgn. See [source and dependency license scope](docs/license-scope.md) before redistributing dependencies or a built bundle.
